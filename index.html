@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Housie Game</title>
+  <link rel="stylesheet" href="styles.css" />
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h1>🎯 Housie Game</h1>
+
+    <div id="modeSelection">
+      <h2>Select Game Mode</h2>
+      <div class="mode-options">
+        <div class="mode" data-mode="solo">👤Play Solo <span class="tick">✔️</span></div>
+        <div class="mode" data-mode="computer">💻Play with Computer <span class="tick">✔️</span></div>
+        <div class="mode" data-mode="friends">🧑‍🤝‍🧑Play with Friends <span class="tick">✔️</span></div>
+      </div>
+
+      <div id="playerInputs"></div>
+
+      <button id="startBtn" disabled>Start Game</button>
+    </div>
+
+    <div id="gamePage" style="display:none">
+      <div class="header">
+        <button id="backBtn">⬅ Back</button>
+      </div>
+      <div class="game-layout">
+        <div id="numberList" class="number-list"></div>
+        <div class="tickets-section">
+          <div id="playersTickets"></div>
+          <div id="winnersList" style="display:none"></div>
+        </div>
+        <div class="controls">
+          <h2>Called Numbers</h2>
+          <div id="calledNumbers"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+  <script>
+    document.addEventListener('click', function (e) {
+      if (e.target.classList.contains('ticket-cell') && e.target.textContent.trim() !== '') {
+        e.target.classList.toggle('crossed');
+      }
+      if (e.target.classList.contains('call-number-btn')) {
+        callNumber();
+      }
+      if (e.target.classList.contains('reset-btn')) {
+        resetGame();
+      }
+    });
+  </script>
+</body>
+</html>
