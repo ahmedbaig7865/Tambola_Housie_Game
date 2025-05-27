@@ -14,8 +14,6 @@ let playerNames = [];
 let remainingNumbers = [...Array(90).keys()].map(n => n + 1);
 let computerTicket = null;
 let ticketsData = [];
-let winners = [];
-let activePlayers = [];
 
 modeElements.forEach(mode => {
   mode.addEventListener('click', () => {
@@ -111,8 +109,6 @@ startBtn.addEventListener('click', () => {
   winnersList.style.display = 'none';
   computerTicket = null;
   ticketsData = [];
-  winners = [];
-  activePlayers = [...playerNames];
 
   console.log('Game state reset, generating UI elements');
   generateNumberList();
@@ -124,6 +120,14 @@ function callNumber() {
   if (remainingNumbers.length === 0) {
     alert("All numbers have been called!");
     document.querySelectorAll('.call-number-btn').forEach(btn => btn.disabled = true);
+
+    const gameMessage = document.createElement('div');
+    gameMessage.className = 'game-message';
+    gameMessage.textContent = 'Press reset button to reset the game';
+    playersTickets.appendChild(gameMessage);
+    console.log('Displayed message: Press reset button to reset the game');
+
+    speakMessage('Press reset button to reset the game');
     return;
   }
   const index = Math.floor(Math.random() * remainingNumbers.length);
@@ -136,23 +140,69 @@ function callNumber() {
   markNumberAsCalled(number);
   speakNumber(number);
 
-  if (selectedMode === 'computer' && computerTicket) {
-    const computerTicketDiv = playersTickets.querySelector('.player-ticket-container:nth-child(2) .ticket');
-    if (computerTicketDiv) {
-      const flatTicket = computerTicket.flat();
-      const cells = computerTicketDiv.querySelectorAll('.ticket-cell');
+  let gameEnded = false;
+
+  ticketsData.forEach((ticket, playerIndex) => {
+    if (gameEnded) return;
+
+    const ticketDiv = playersTickets.querySelectorAll('.player-ticket-container')[playerIndex];
+    const cells = ticketDiv.querySelectorAll('.ticket-cell');
+    const flatTicket = ticket.flat();
+
+    if (selectedMode === 'computer' && playerNames[playerIndex] === 'Computer' && computerTicket) {
       cells.forEach((cell, idx) => {
-        if (flatTicket[idx] === number) {
+        if (flatTicket[idx] === number && !cell.classList.contains('crossed')) {
+          console.log(`Computer crossed number: ${number}`);
           cell.classList.add('crossed');
+
+          const nonEmptyCells = flatTicket.filter(num => num !== 0).length;
+          const crossedCells = Array.from(cells).filter(c => c.classList.contains('crossed')).length;
+
+          if (crossedCells === nonEmptyCells) {
+            console.log('Computer crossed the last number!');
+            ticketDiv.style.display = 'none';
+            const gameMessage = document.createElement('div');
+            gameMessage.className = 'game-message';
+            gameMessage.textContent = `${playerNames[playerIndex]} Wins!`;
+            playersTickets.appendChild(gameMessage);
+            triggerConfetti();
+            document.querySelectorAll('.call-number-btn').forEach(btn => btn.disabled = true);
+            gameEnded = true;
+          }
+        }
+      });
+    } else if (selectedMode === 'solo' || selectedMode === 'friends') {
+      cells.forEach((cell, idx) => {
+        if (flatTicket[idx] === number && cell.classList.contains('crossed')) {
+          const nonEmptyCells = flatTicket.filter(num => num !== 0).length;
+          const crossedCells = Array.from(cells).filter(c => c.classList.contains('crossed')).length;
+
+          if (crossedCells === nonEmptyCells) {
+            console.log(`${playerNames[playerIndex]} crossed the last number!`);
+            ticketDiv.style.display = 'none';
+            const gameMessage = document.createElement('div');
+            gameMessage.className = 'game-message';
+            gameMessage.textContent = `${playerNames[playerIndex]} Wins!`;
+            playersTickets.appendChild(gameMessage);
+            triggerConfetti();
+            document.querySelectorAll('.call-number-btn').forEach(btn => btn.disabled = true);
+            gameEnded = true;
+          }
         }
       });
     }
-  }
-
-  checkForWinners();
+  });
 
   if (remainingNumbers.length === 0) {
     document.querySelectorAll('.call-number-btn').forEach(btn => btn.disabled = true);
+
+    const gameMessage = document.createElement('div');
+    gameMessage.className = 'game-message';
+    gameMessage.textContent = 'Press reset button to reset the game';
+    playersTickets.appendChild(gameMessage);
+    console.log('Displayed message: Press reset button to reset the game');
+
+    speakMessage('Press reset button to reset the game');
   }
 }
 
@@ -167,8 +217,6 @@ function resetGame() {
   remainingNumbers = [...Array(90).keys()].map(n => n + 1);
   computerTicket = null;
   ticketsData = [];
-  winners = [];
-  activePlayers = [...playerNames];
 
   console.log('Game state reset, regenerating UI elements');
   generateNumberList();
@@ -190,8 +238,6 @@ backBtn.addEventListener('click', () => {
   selectedMode = '';
   computerTicket = null;
   ticketsData = [];
-  winners = [];
-  activePlayers = [];
   
   modeElements.forEach(m => m.classList.remove('selected'));
   showInputsForMode('solo');
@@ -287,11 +333,6 @@ function generateTickets() {
   playersTickets.appendChild(resetBtn);
   console.log('Added Reset button after Call Number button');
 
-  if (selectedMode === 'friends') {
-    winnersList.style.display = 'block';
-    winnersList.innerHTML = '<h3>Winners</h3><ul id="winnersListItems"></ul>';
-  }
-
   console.log('Finished generateTickets, playersTickets content:', playersTickets.innerHTML);
 }
 
@@ -343,78 +384,17 @@ function triggerConfetti() {
   });
 }
 
-function checkForWinners() {
-  console.log('Checking for winners');
-  let gameEnded = false;
-
-  ticketsData.forEach((ticket, playerIndex) => {
-    if (gameEnded || winners.includes(playerIndex) || !activePlayers.includes(playerNames[playerIndex])) return;
-
-    const ticketDiv = playersTickets.querySelectorAll('.player-ticket-container')[playerIndex];
-    const cells = ticketDiv.querySelectorAll('.ticket-cell');
-    const flatTicket = ticket.flat();
-    const nonEmptyCells = flatTicket.filter(num => num !== 0).length;
-    const crossedCells = Array.from(cells).filter(cell => cell.classList.contains('crossed')).length;
-
-    if (crossedCells === nonEmptyCells) {
-      winners.push(playerIndex);
-      const position = winners.length;
-      const positionText = getPositionText(position);
-
-      ticketDiv.style.display = 'none';
-      activePlayers = activePlayers.filter(name => name !== playerNames[playerIndex]);
-
-      if (selectedMode === 'solo') {
-        const gameMessage = document.createElement('div');
-        gameMessage.className = 'game-message';
-        gameMessage.textContent = 'Game Completed';
-        playersTickets.appendChild(gameMessage);
-        triggerConfetti();
-        document.querySelectorAll('.call-number-btn').forEach(btn => btn.disabled = true);
-        gameEnded = true;
-      } else if (selectedMode === 'computer') {
-        const gameMessage = document.createElement('div');
-        gameMessage.className = 'game-message';
-        gameMessage.textContent = playerIndex === 0 ? 'Player Wins!' : 'Computer Wins!';
-        playersTickets.appendChild(gameMessage);
-        triggerConfetti();
-        document.querySelectorAll('.call-number-btn').forEach(btn => btn.disabled = true);
-        gameEnded = true;
-      } else if (selectedMode === 'friends') {
-        const gameMessage = document.createElement('div');
-        gameMessage.className = 'game-message';
-        gameMessage.textContent = `${playerNames[playerIndex]} is the ${positionText} Winner!`;
-        playersTickets.appendChild(gameMessage);
-        triggerConfetti();
-
-        const winnersListItems = document.getElementById('winnersListItems');
-        const listItem = document.createElement('li');
-        listItem.textContent = `${positionText}: ${playerNames[playerIndex]}`;
-        winnersListItems.appendChild(listItem);
-
-        if (activePlayers.length === 0) {
-          const finalMessage = document.createElement('div');
-          finalMessage.className = 'game-message';
-          finalMessage.textContent = 'Game Over! All Players Have Won!';
-          playersTickets.appendChild(finalMessage);
-          triggerConfetti();
-          document.querySelectorAll('.call-number-btn').forEach(btn => btn.disabled = true);
-          gameEnded = true;
-        }
-      }
-    }
-  });
-}
-
-function getPositionText(position) {
-  const suffixes = ['th', 'st', 'nd', 'rd'];
-  const suffix = position > 3 ? suffixes[0] : suffixes[position];
-  return `${position}${suffix}`;
-}
-
 function speakNumber(number) {
   console.log(`Speaking number ${number}`);
   const utter = new SpeechSynthesisUtterance(`Number ${number}`);
+  utter.pitch = 1;
+  utter.rate = 1;
+  speechSynthesis.speak(utter);
+}
+
+function speakMessage(message) {
+  console.log(`Speaking message: ${message}`);
+  const utter = new SpeechSynthesisUtterance(message);
   utter.pitch = 1;
   utter.rate = 1;
   speechSynthesis.speak(utter);

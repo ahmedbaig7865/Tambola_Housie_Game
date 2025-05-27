@@ -46,7 +46,9 @@
   <script>
     document.addEventListener('click', function (e) {
       if (e.target.classList.contains('ticket-cell') && e.target.textContent.trim() !== '') {
+        console.log('Player crossed number:', e.target.textContent);
         e.target.classList.toggle('crossed');
+        checkWinnerAfterManualCross(e.target);
       }
       if (e.target.classList.contains('call-number-btn')) {
         callNumber();
@@ -55,6 +57,25 @@
         resetGame();
       }
     });
+
+    function checkWinnerAfterManualCross(cell) {
+      const ticketDiv = cell.closest('.ticket');
+      const container = ticketDiv.closest('.player-ticket-container');
+      const playerName = container.querySelector('h3').textContent.replace("'s Ticket", "");
+      const cells = ticketDiv.querySelectorAll('.ticket-cell');
+      const nonEmptyCells = Array.from(cells).filter(c => c.textContent.trim() !== '').length;
+      const crossedCells = Array.from(cells).filter(c => c.classList.contains('crossed')).length;
+
+      if (crossedCells === nonEmptyCells) {
+        console.log(`${playerName} has crossed all numbers!`);
+        const gameMessage = document.createElement('div');
+        gameMessage.className = 'game-message';
+        gameMessage.textContent = `${playerName} Wins!`;
+        document.getElementById('playersTickets').appendChild(gameMessage);
+        triggerConfetti();
+        document.querySelectorAll('.call-number-btn').forEach(btn => btn.disabled = true);
+      }
+    }
   </script>
 </body>
 </html>
