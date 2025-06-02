@@ -4,40 +4,80 @@ const startBtn = document.getElementById('startBtn');
 const gamePage = document.getElementById('gamePage');
 const modeSelection = document.getElementById('modeSelection');
 const calledNumbers = document.getElementById('calledNumbers');
+const callNumberBtn = document.getElementById('callNumberBtn');
 const playersTickets = document.getElementById('playersTickets');
 const numberList = document.getElementById('numberList');
 const backBtn = document.getElementById('backBtn');
-const winnersList = document.getElementById('winnersList');
+const resetBtn = document.getElementById('resetBtn');
+const winnerBlast = document.getElementById('winnerBlast');
+const endGameMessage = document.getElementById('endGameMessage');
+const loserMessage = document.getElementById('loserMessage');
 
 let selectedMode = '';
 let playerNames = [];
 let remainingNumbers = [...Array(90).keys()].map(n => n + 1);
 let computerTicket = null;
 let ticketsData = [];
+let winners = [];
+let activePlayers = [];
+let currentUtterance = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+  console.log("DOM fully loaded");
+  
+  if (!modeSelection || !playerInputs || !startBtn || !gamePage || !calledNumbers || !callNumberBtn || !playersTickets || !numberList || !backBtn || !resetBtn || !winnerBlast || !endGameMessage || !loserMessage) {
+    console.error("One or more DOM elements not found:", {
+      modeSelection, playerInputs, startBtn, gamePage, calledNumbers, callNumberBtn, playersTickets, numberList, backBtn, resetBtn, winnerBlast, endGameMessage, loserMessage
+    });
+    return;
+  }
+  
+  modeSelection.style.display = 'block';
+  console.log("modeSelection should be visible");
+
+  console.log("Mode elements found:", modeElements.length);
+});
 
 modeElements.forEach(mode => {
   mode.addEventListener('click', () => {
-    console.log('Mode clicked:', mode.dataset.mode);
-    modeElements.forEach(m => m.classList.remove('selected'));
-    mode.classList.add('selected');
-    selectedMode = mode.dataset.mode;
+    console.log("Mode clicked:", mode.dataset.mode);
+    
+    // Toggle selection: if already selected, deselect it; otherwise, select it
+    if (mode.classList.contains('selected')) {
+      mode.classList.remove('selected');
+      selectedMode = '';
+    } else {
+      modeElements.forEach(m => m.classList.remove('selected'));
+      mode.classList.add('selected');
+      selectedMode = mode.dataset.mode;
+    }
+
+    // Update start button state based on whether a mode is selected
+    startBtn.disabled = selectedMode === '';
+    console.log("Selected mode:", selectedMode, "startBtn disabled:", startBtn.disabled);
+
+    // Show inputs based on the selected mode (or clear if deselected)
     showInputsForMode(selectedMode);
   });
 });
 
 function showInputsForMode(mode) {
-  console.log('Showing inputs for mode:', mode);
   playerInputs.innerHTML = '';
-  startBtn.disabled = true;
+  startBtn.disabled = mode === ''; // Ensure button is disabled if no mode is selected
+  console.log("Showing inputs for mode:", mode);
+
+  if (!mode) {
+    // No mode selected, keep start button disabled
+    return;
+  }
 
   if (mode === 'solo' || mode === 'computer') {
     const nameInput = document.createElement('input');
     nameInput.type = 'text';
     nameInput.placeholder = 'Enter your name';
     nameInput.addEventListener('input', () => {
-      const isFilled = nameInput.value.trim() !== '';
-      console.log('Name input changed, isFilled:', isFilled);
-      startBtn.disabled = !isFilled;
+      startBtn.disabled = nameInput.value.trim() === '';
+      console.log("Name input changed, startBtn disabled:", startBtn.disabled);
     });
     playerInputs.appendChild(nameInput);
   } else if (mode === 'friends') {
@@ -54,7 +94,6 @@ function showInputsForMode(mode) {
     playerInputs.appendChild(nameContainer);
 
     select.addEventListener('change', () => {
-      console.log('Number of players selected:', select.value);
       nameContainer.innerHTML = '';
       for (let i = 1; i <= select.value; i++) {
         const input = document.createElement('input');
@@ -63,8 +102,8 @@ function showInputsForMode(mode) {
         input.required = true;
         input.addEventListener('input', () => {
           const allFilled = [...nameContainer.querySelectorAll('input')].every(inp => inp.value.trim() !== '');
-          console.log('Friends mode inputs changed, allFilled:', allFilled);
           startBtn.disabled = !allFilled;
+          console.log("Friends mode input changed, startBtn disabled:", startBtn.disabled);
         });
         nameContainer.appendChild(input);
       }
@@ -77,9 +116,7 @@ function showInputsForMode(mode) {
 }
 
 startBtn.addEventListener('click', () => {
-  console.log('Start button clicked');
-  console.log('Selected mode:', selectedMode);
-
+  console.log("Start button clicked");
   if (selectedMode === 'solo') {
     const name = playerInputs.querySelector('input').value.trim();
     playerNames = [name];
@@ -90,164 +127,115 @@ startBtn.addEventListener('click', () => {
     playerNames = [...playerInputs.querySelectorAll('input')].map(input => input.value.trim());
   }
 
-  console.log('Player names:', playerNames);
-
-  if (playerNames.length === 0 || playerNames.some(name => name === '')) {
-    console.error('Player names are empty or invalid');
-    alert('Please enter valid names for all players.');
-    return;
-  }
+  console.log("Player names:", playerNames);
 
   modeSelection.style.display = 'none';
   gamePage.style.display = 'block';
+  console.log("gamePage should be visible");
 
   remainingNumbers = [...Array(90).keys()].map(n => n + 1);
   calledNumbers.innerHTML = '';
   playersTickets.innerHTML = '';
   numberList.innerHTML = '';
-  winnersList.innerHTML = '';
-  winnersList.style.display = 'none';
   computerTicket = null;
   ticketsData = [];
+  winners = [];
+  activePlayers = [...playerNames];
+  callNumberBtn.disabled = false;
+  endGameMessage.style.display = 'none';
+  loserMessage.style.display = 'none';
 
-  console.log('Game state reset, generating UI elements');
   generateNumberList();
   generateTickets();
 });
 
-function callNumber() {
-  console.log('Call Number button clicked');
+callNumberBtn.addEventListener('click', () => {
   if (remainingNumbers.length === 0) {
-    alert("All numbers have been called!");
-    document.querySelectorAll('.call-number-btn').forEach(btn => btn.disabled = true);
-
-    const gameMessage = document.createElement('div');
-    gameMessage.className = 'game-message';
-    gameMessage.textContent = 'Press reset button to reset the game';
-    playersTickets.appendChild(gameMessage);
-    console.log('Displayed message: Press reset button to reset the game');
-
-    speakMessage('Press reset button to reset the game');
+    endGameMessage.style.display = 'block';
+    speakMessage("All Numbers are Generated, Press Reset Button to Reset the Game");
+    callNumberBtn.disabled = true;
     return;
   }
+
   const index = Math.floor(Math.random() * remainingNumbers.length);
   const number = remainingNumbers.splice(index, 1)[0];
+  console.log("Number called:", number);
+
+  speakMessage(`Number ${number}`);
 
   const span = document.createElement('span');
   span.textContent = number;
   calledNumbers.appendChild(span);
 
   markNumberAsCalled(number);
-  speakNumber(number);
 
-  let gameEnded = false;
-
-  ticketsData.forEach((ticket, playerIndex) => {
-    if (gameEnded) return;
-
-    const ticketDiv = playersTickets.querySelectorAll('.player-ticket-container')[playerIndex];
-    const cells = ticketDiv.querySelectorAll('.ticket-cell');
-    const flatTicket = ticket.flat();
-
-    if (selectedMode === 'computer' && playerNames[playerIndex] === 'Computer' && computerTicket) {
+  if (selectedMode === 'computer' && computerTicket) {
+    const computerTicketDiv = playersTickets.querySelector('.player-ticket-container:nth-child(2) .ticket');
+    if (computerTicketDiv) {
+      const flatTicket = computerTicket.flat();
+      const cells = computerTicketDiv.querySelectorAll('.ticket-cell');
       cells.forEach((cell, idx) => {
-        if (flatTicket[idx] === number && !cell.classList.contains('crossed')) {
-          console.log(`Computer crossed number: ${number}`);
+        if (flatTicket[idx] === number) {
           cell.classList.add('crossed');
-
-          const nonEmptyCells = flatTicket.filter(num => num !== 0).length;
-          const crossedCells = Array.from(cells).filter(c => c.classList.contains('crossed')).length;
-
-          if (crossedCells === nonEmptyCells) {
-            console.log('Computer crossed the last number!');
-            ticketDiv.style.display = 'none';
-            const gameMessage = document.createElement('div');
-            gameMessage.className = 'game-message';
-            gameMessage.textContent = `${playerNames[playerIndex]} Wins!`;
-            playersTickets.appendChild(gameMessage);
-            triggerConfetti();
-            document.querySelectorAll('.call-number-btn').forEach(btn => btn.disabled = true);
-            gameEnded = true;
-          }
         }
       });
-    } else if (selectedMode === 'solo' || selectedMode === 'friends') {
-      cells.forEach((cell, idx) => {
-        if (flatTicket[idx] === number && cell.classList.contains('crossed')) {
-          const nonEmptyCells = flatTicket.filter(num => num !== 0).length;
-          const crossedCells = Array.from(cells).filter(c => c.classList.contains('crossed')).length;
-
-          if (crossedCells === nonEmptyCells) {
-            console.log(`${playerNames[playerIndex]} crossed the last number!`);
-            ticketDiv.style.display = 'none';
-            const gameMessage = document.createElement('div');
-            gameMessage.className = 'game-message';
-            gameMessage.textContent = `${playerNames[playerIndex]} Wins!`;
-            playersTickets.appendChild(gameMessage);
-            triggerConfetti();
-            document.querySelectorAll('.call-number-btn').forEach(btn => btn.disabled = true);
-            gameEnded = true;
-          }
-        }
-      });
+      checkForWinners();
     }
-  });
+  }
+
+  checkForWinners();
 
   if (remainingNumbers.length === 0) {
-    document.querySelectorAll('.call-number-btn').forEach(btn => btn.disabled = true);
-
-    const gameMessage = document.createElement('div');
-    gameMessage.className = 'game-message';
-    gameMessage.textContent = 'Press reset button to reset the game';
-    playersTickets.appendChild(gameMessage);
-    console.log('Displayed message: Press reset button to reset the game');
-
-    speakMessage('Press reset button to reset the game');
+    endGameMessage.style.display = 'block';
+    speakMessage("All Numbers are Generated, Press Reset Button to Reset the Game");
+    callNumberBtn.disabled = true;
   }
+});
+
+function markNumberAsCalled(number) {
+  const cells = document.querySelectorAll('.number-cell');
+  cells.forEach(cell => {
+    if (parseInt(cell.dataset.number) === number) {
+      cell.classList.add('called');
+      console.log(`Marked number ${number} as called in number-list`);
+    }
+  });
 }
 
 function resetGame() {
-  console.log('Reset button clicked');
-  
-  calledNumbers.innerHTML = '';
-  playersTickets.innerHTML = '';
-  numberList.innerHTML = '';
-  winnersList.innerHTML = '';
-  winnersList.style.display = 'none';
-  remainingNumbers = [...Array(90).keys()].map(n => n + 1);
-  computerTicket = null;
-  ticketsData = [];
-
-  console.log('Game state reset, regenerating UI elements');
-  generateNumberList();
-  generateTickets();
-}
-
-backBtn.addEventListener('click', () => {
-  console.log('Back button clicked');
+  console.log("Back/Reset button clicked, resetting game");
   gamePage.style.display = 'none';
   modeSelection.style.display = 'block';
   
   calledNumbers.innerHTML = '';
   playersTickets.innerHTML = '';
   numberList.innerHTML = '';
-  winnersList.innerHTML = '';
-  winnersList.style.display = 'none';
+  winnerBlast.style.display = 'none';
+  endGameMessage.style.display = 'none';
+  loserMessage.style.display = 'none';
   remainingNumbers = [...Array(90).keys()].map(n => n + 1);
   playerNames = [];
   selectedMode = '';
   computerTicket = null;
   ticketsData = [];
+  winners = [];
+  activePlayers = [];
   
   modeElements.forEach(m => m.classList.remove('selected'));
   showInputsForMode('solo');
-});
+}
+
+backBtn.addEventListener('click', resetGame);
+resetBtn.addEventListener('click', resetGame);
 
 function generateNumberList() {
-  console.log('Generating number list');
-  console.log('numberList element:', numberList);
-  numberList.innerHTML = '';
+  const numberList = document.getElementById('numberList');
 
+  // Add the heading
+  const heading = document.createElement('div');
+  heading.className = 'number-heading';
+  heading.textContent = 'Numbers List';
+  numberList.appendChild(heading);
   const ranges = [
     [1, 10],
     [11, 20],
@@ -257,48 +245,38 @@ function generateNumberList() {
     [51, 60],
     [61, 70],
     [71, 80],
-    [81, 90],
+    [81, 90]
   ];
 
-  ranges.forEach(([start, end], rowIndex) => {
-    console.log(`Generating row ${rowIndex + 1}: ${start} to ${end}`);
+  ranges.forEach(([start, end]) => {
     const row = document.createElement('div');
     row.className = 'number-row';
     
-    for (let i = start; i <= Math.min(end, 90); i++) {
+    for (let i = start; i <= end; i++) {
       const cell = document.createElement('div');
       cell.className = 'number-cell';
       cell.textContent = i;
       cell.dataset.number = i;
       row.appendChild(cell);
-      console.log(`Added number ${i} to row`);
     }
     
     numberList.appendChild(row);
-    console.log(`Appended row ${rowIndex + 1} to numberList`);
   });
-
-  console.log('Number list generated, numberList content:', numberList.innerHTML);
+  console.log("Number list generated");
 }
 
 function generateTickets() {
-  console.log('Starting generateTickets');
-  console.log('playersTickets element:', playersTickets);
   playersTickets.innerHTML = '';
   ticketsData = [];
 
-  console.log('Generating tickets for players:', playerNames);
-
-  if (playerNames.length === 0) {
-    console.error('No players to generate tickets for');
-    return;
-  }
-
   playerNames.forEach((name, index) => {
-    console.log(`Creating ticket for ${name} (index: ${index})`);
     const container = document.createElement('div');
     container.classList.add('player-ticket-container');
-    container.innerHTML = `<h3>${name}'s Ticket</h3>`;
+    
+    const header = document.createElement('h3');
+    header.innerHTML = `<span class="player-name">${name}'s Ticket</span>`;
+    container.appendChild(header);
+
     const ticket = generateTicket();
     const ticketDiv = document.createElement('div');
     ticketDiv.className = 'ticket';
@@ -309,35 +287,75 @@ function generateTickets() {
       computerTicket = ticket;
     }
 
-    ticket.flat().forEach(num => {
+    ticket.flat().forEach((num, idx) => {
       const cell = document.createElement('div');
       cell.className = 'ticket-cell';
       cell.textContent = num === 0 ? '' : num;
+      cell.dataset.index = idx;
       ticketDiv.appendChild(cell);
     });
 
     container.appendChild(ticketDiv);
     playersTickets.appendChild(container);
-    console.log(`Appended ticket container for ${name} to playersTickets`);
+
+    console.log(`Generated ticket for ${name}:`, ticket);
+    console.log(`Ticket HTML for ${name}:`, ticketDiv.outerHTML);
   });
 
-  const callNumberBtn = document.createElement('button');
-  callNumberBtn.className = 'call-number-btn';
-  callNumberBtn.textContent = 'Call Number';
-  playersTickets.appendChild(callNumberBtn);
-  console.log('Added Call Number button after all tickets');
+  const ticketCells = playersTickets.querySelectorAll('.ticket-cell');
+  console.log(`Total ticket cells created: ${ticketCells.length}`);
+  console.log("Tickets generated for players:", playerNames);
+  console.log("playersTickets content:", playersTickets.innerHTML);
+}
 
-  const resetBtn = document.createElement('button');
-  resetBtn.className = 'reset-btn';
-  resetBtn.textContent = 'Reset';
-  playersTickets.appendChild(resetBtn);
-  console.log('Added Reset button after Call Number button');
+function showWinnerBlast(playerName, positionText) {
+  const winnerMessage = winnerBlast.querySelector('.winner-message');
+  winnerMessage.textContent = `${playerName} is the ${positionText} Winner! 🎉`;
+  winnerBlast.style.display = 'flex';
+  winnerBlast.classList.remove('show');
+  void winnerBlast.offsetWidth;
+  winnerBlast.classList.add('show');
+}
 
-  console.log('Finished generateTickets, playersTickets content:', playersTickets.innerHTML);
+function checkForWinners() {
+  ticketsData.forEach((ticket, playerIndex) => {
+    if (winners.includes(playerIndex) || !activePlayers.includes(playerNames[playerIndex])) return;
+
+    const ticketDiv = playersTickets.querySelectorAll('.player-ticket-container')[playerIndex].querySelector('.ticket');
+    const cells = ticketDiv.querySelectorAll('.ticket-cell');
+    const flatTicket = ticket.flat();
+    const nonEmptyCells = flatTicket.filter(num => num !== 0).length;
+    const crossedCells = Array.from(cells).filter(cell => cell.classList.contains('crossed')).length;
+
+    if (crossedCells === nonEmptyCells) {
+      winners.push(playerIndex);
+      const position = winners.length;
+      const positionText = getPositionText(position);
+      
+      showWinnerBlast(playerNames[playerIndex], positionText);
+      
+      activePlayers = activePlayers.filter(name => name !== playerNames[playerIndex]);
+      ticketDiv.parentElement.style.display = 'none';
+
+      if (activePlayers.length === 1 && playerNames.length >= 3) {
+        const loserName = activePlayers[0];
+        setTimeout(() => {
+          loserMessage.textContent = `${loserName} is Loser`;
+          loserMessage.style.display = 'block';
+          callNumberBtn.disabled = true;
+        }, 3000);
+      }
+    }
+  });
+}
+
+function getPositionText(position) {
+  const suffixes = ['th', 'st', 'nd', 'rd'];
+  const suffix = position > 3 ? suffixes[0] : suffixes[position];
+  return `${position}${suffix}`;
 }
 
 function generateTicket() {
-  console.log('Generating a ticket');
   const ticket = Array.from({ length: 3 }, () => Array(9).fill(0));
 
   for (let row = 0; row < 3; row++) {
@@ -360,42 +378,21 @@ function generateTicket() {
     });
   }
 
-  console.log('Generated ticket:', ticket);
   return ticket;
 }
 
-function markNumberAsCalled(number) {
-  console.log(`Marking number ${number} as called`);
-  const cell = numberList.querySelector(`.number-cell[data-number="${number}"]`);
-  if (cell) {
-    cell.classList.add('called');
-    console.log(`Marked number ${number} as called`);
-  } else {
-    console.log(`Number ${number} not found in number list`);
-  }
-}
-
-function triggerConfetti() {
-  console.log('Triggering confetti animation');
-  confetti({
-    particleCount: 100,
-    spread: 70,
-    origin: { y: 0.6 }
-  });
-}
-
-function speakNumber(number) {
-  console.log(`Speaking number ${number}`);
-  const utter = new SpeechSynthesisUtterance(`Number ${number}`);
-  utter.pitch = 1;
-  utter.rate = 1;
-  speechSynthesis.speak(utter);
-}
-
 function speakMessage(message) {
-  console.log(`Speaking message: ${message}`);
-  const utter = new SpeechSynthesisUtterance(message);
-  utter.pitch = 1;
-  utter.rate = 1;
-  speechSynthesis.speak(utter);
+  if (currentUtterance) {
+    speechSynthesis.cancel();
+  }
+
+  currentUtterance = new SpeechSynthesisUtterance(message);
+  currentUtterance.pitch = 1;
+  currentUtterance.rate = 1;
+
+  currentUtterance.onend = () => {
+    currentUtterance = null;
+  };
+
+  speechSynthesis.speak(currentUtterance);
 }

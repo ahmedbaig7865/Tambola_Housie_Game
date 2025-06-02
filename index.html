@@ -5,18 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Housie Game</title>
   <link rel="stylesheet" href="styles.css" />
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 </head>
 <body>
   <div class="container">
     <h1>🎯 Housie Game</h1>
 
+    <!-- Mode Selection should be visible by default -->
     <div id="modeSelection">
       <h2>Select Game Mode</h2>
       <div class="mode-options">
-        <div class="mode" data-mode="solo">👤Play Solo <span class="tick">✔️</span></div>
-        <div class="mode" data-mode="computer">💻Play with Computer <span class="tick">✔️</span></div>
-        <div class="mode" data-mode="friends">🧑‍🤝‍🧑Play with Friends <span class="tick">✔️</span></div>
+        <div class="mode" data-mode="solo">👤 Play Solo <span class="tick">✔️</span></div>
+        <div class="mode" data-mode="computer">💻 Play with Computer <span class="tick">✔️</span></div>
+        <div class="mode" data-mode="friends">🧑‍🤝‍🧑 Play with Friends <span class="tick">✔️</span></div>
       </div>
 
       <div id="playerInputs"></div>
@@ -26,19 +26,30 @@
 
     <div id="gamePage" style="display:none">
       <div class="header">
-        <button id="backBtn">⬅ Back</button>
+        <!-- Empty header -->
+      </div>
+      <div class="button-group">
+        <button id="callNumberBtn">Call Number</button>
+        <button id="resetBtn">Reset</button>
       </div>
       <div class="game-layout">
-        <div id="numberList" class="number-list"></div>
+        <div id="numberList" class="number-list"><h1>Numbers List</h1></div>
+        <button id="backBtn">⬅️ Back</button>
         <div class="tickets-section">
           <div id="playersTickets"></div>
-          <div id="winnersList" style="display:none"></div>
         </div>
         <div class="controls">
-          <h2>Called Numbers</h2>
+          <h2>Called Numbers 📢</h2>
           <div id="calledNumbers"></div>
         </div>
       </div>
+      <div id="winnerBlast" class="winner-blast">
+        <div class="winner-message"></div>
+      </div>
+      <div id="endGameMessage" class="end-game-message">
+        All Numbers are Generated, Press Reset Button to Reset the Game
+      </div>
+      <div id="loserMessage" class="loser-message"></div>
     </div>
   </div>
 
@@ -46,36 +57,16 @@
   <script>
     document.addEventListener('click', function (e) {
       if (e.target.classList.contains('ticket-cell') && e.target.textContent.trim() !== '') {
-        console.log('Player crossed number:', e.target.textContent);
+        const ticketContainer = e.target.closest('.player-ticket-container');
+        const playerIndex = Array.from(document.querySelectorAll('.player-ticket-container')).indexOf(ticketContainer);
+        if (selectedMode === 'computer' && playerIndex === 1) {
+          return;
+        }
         e.target.classList.toggle('crossed');
-        checkWinnerAfterManualCross(e.target);
-      }
-      if (e.target.classList.contains('call-number-btn')) {
-        callNumber();
-      }
-      if (e.target.classList.contains('reset-btn')) {
-        resetGame();
+        // Check for winners immediately after crossing a number
+        checkForWinners();
       }
     });
-
-    function checkWinnerAfterManualCross(cell) {
-      const ticketDiv = cell.closest('.ticket');
-      const container = ticketDiv.closest('.player-ticket-container');
-      const playerName = container.querySelector('h3').textContent.replace("'s Ticket", "");
-      const cells = ticketDiv.querySelectorAll('.ticket-cell');
-      const nonEmptyCells = Array.from(cells).filter(c => c.textContent.trim() !== '').length;
-      const crossedCells = Array.from(cells).filter(c => c.classList.contains('crossed')).length;
-
-      if (crossedCells === nonEmptyCells) {
-        console.log(`${playerName} has crossed all numbers!`);
-        const gameMessage = document.createElement('div');
-        gameMessage.className = 'game-message';
-        gameMessage.textContent = `${playerName} Wins!`;
-        document.getElementById('playersTickets').appendChild(gameMessage);
-        triggerConfetti();
-        document.querySelectorAll('.call-number-btn').forEach(btn => btn.disabled = true);
-      }
-    }
   </script>
 </body>
 </html>
