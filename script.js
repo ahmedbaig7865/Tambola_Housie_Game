@@ -8,6 +8,7 @@ const callNumberBtn = document.getElementById('callNumberBtn');
 const playersTickets = document.getElementById('playersTickets');
 const numberList = document.getElementById('numberList');
 const backBtn = document.getElementById('backBtn');
+let numberListBackBtn = document.getElementById('numberListBackBtn');
 const resetBtn = document.getElementById('resetBtn');
 const winnerBlast = document.getElementById('winnerBlast');
 const endGameMessage = document.getElementById('endGameMessage');
@@ -25,9 +26,9 @@ let currentUtterance = null;
 document.addEventListener('DOMContentLoaded', () => {
   console.log("DOM fully loaded");
   
-  if (!modeSelection || !playerInputs || !startBtn || !gamePage || !calledNumbers || !callNumberBtn || !playersTickets || !numberList || !backBtn || !resetBtn || !winnerBlast || !endGameMessage || !loserMessage) {
+  if (!modeSelection || !playerInputs || !startBtn || !gamePage || !calledNumbers || !callNumberBtn || !playersTickets || !numberList || !backBtn || !numberListBackBtn || !resetBtn || !winnerBlast || !endGameMessage || !loserMessage) {
     console.error("One or more DOM elements not found:", {
-      modeSelection, playerInputs, startBtn, gamePage, calledNumbers, callNumberBtn, playersTickets, numberList, backBtn, resetBtn, winnerBlast, endGameMessage, loserMessage
+      modeSelection, playerInputs, startBtn, gamePage, calledNumbers, callNumberBtn, playersTickets, numberList, backBtn, numberListBackBtn, resetBtn, winnerBlast, endGameMessage, loserMessage
     });
     return;
   }
@@ -42,7 +43,6 @@ modeElements.forEach(mode => {
   mode.addEventListener('click', () => {
     console.log("Mode clicked:", mode.dataset.mode);
     
-    // Toggle selection: if already selected, deselect it; otherwise, select it
     if (mode.classList.contains('selected')) {
       mode.classList.remove('selected');
       selectedMode = '';
@@ -52,22 +52,19 @@ modeElements.forEach(mode => {
       selectedMode = mode.dataset.mode;
     }
 
-    // Update start button state based on whether a mode is selected
     startBtn.disabled = selectedMode === '';
     console.log("Selected mode:", selectedMode, "startBtn disabled:", startBtn.disabled);
 
-    // Show inputs based on the selected mode (or clear if deselected)
     showInputsForMode(selectedMode);
   });
 });
 
 function showInputsForMode(mode) {
   playerInputs.innerHTML = '';
-  startBtn.disabled = mode === ''; // Ensure button is disabled if no mode is selected
+  startBtn.disabled = mode === '';
   console.log("Showing inputs for mode:", mode);
 
   if (!mode) {
-    // No mode selected, keep start button disabled
     return;
   }
 
@@ -75,6 +72,7 @@ function showInputsForMode(mode) {
     const nameInput = document.createElement('input');
     nameInput.type = 'text';
     nameInput.placeholder = 'Enter your name';
+    nameInput.classList.add('form-control', 'w-75', 'mx-auto');
     nameInput.addEventListener('input', () => {
       startBtn.disabled = nameInput.value.trim() === '';
       console.log("Name input changed, startBtn disabled:", startBtn.disabled);
@@ -82,6 +80,7 @@ function showInputsForMode(mode) {
     playerInputs.appendChild(nameInput);
   } else if (mode === 'friends') {
     const select = document.createElement('select');
+    select.classList.add('form-select', 'w-75', 'mx-auto');
     for (let i = 2; i <= 10; i++) {
       const option = document.createElement('option');
       option.value = i;
@@ -99,6 +98,7 @@ function showInputsForMode(mode) {
         const input = document.createElement('input');
         input.type = 'text';
         input.placeholder = `Enter name of Player ${i}`;
+        input.classList.add('form-control', 'w-75', 'mx-auto', 'mt-2');
         input.required = true;
         input.addEventListener('input', () => {
           const allFilled = [...nameContainer.querySelectorAll('input')].every(inp => inp.value.trim() !== '');
@@ -137,6 +137,10 @@ startBtn.addEventListener('click', () => {
   calledNumbers.innerHTML = '';
   playersTickets.innerHTML = '';
   numberList.innerHTML = '';
+  numberList.innerHTML = '<div class="number-heading">Numbers List</div><button id="numberListBackBtn" class="btn btn-success d-block mx-auto mb-3 d-none d-lg-block">⬅️ Back</button>';
+  numberListBackBtn = document.getElementById('numberListBackBtn');
+  numberListBackBtn.addEventListener('click', resetGame);
+  
   computerTicket = null;
   ticketsData = [];
   winners = [];
@@ -210,6 +214,10 @@ function resetGame() {
   calledNumbers.innerHTML = '';
   playersTickets.innerHTML = '';
   numberList.innerHTML = '';
+  numberList.innerHTML = '<div class="number-heading">Numbers List</div><button id="numberListBackBtn" class="btn btn-success d-block mx-auto mb-3 d-none d-lg-block">⬅️ Back</button>';
+  numberListBackBtn = document.getElementById('numberListBackBtn');
+  numberListBackBtn.addEventListener('click', resetGame);
+  
   winnerBlast.style.display = 'none';
   endGameMessage.style.display = 'none';
   loserMessage.style.display = 'none';
@@ -227,15 +235,9 @@ function resetGame() {
 
 backBtn.addEventListener('click', resetGame);
 resetBtn.addEventListener('click', resetGame);
+numberListBackBtn.addEventListener('click', resetGame);
 
 function generateNumberList() {
-  const numberList = document.getElementById('numberList');
-
-  // Add the heading
-  const heading = document.createElement('div');
-  heading.className = 'number-heading';
-  heading.textContent = 'Numbers List';
-  numberList.appendChild(heading);
   const ranges = [
     [1, 10],
     [11, 20],
@@ -266,46 +268,64 @@ function generateNumberList() {
 }
 
 function generateTickets() {
+  if (!playersTickets) {
+    console.error("playersTickets element not found!");
+    return;
+  }
+
   playersTickets.innerHTML = '';
   ticketsData = [];
 
-  playerNames.forEach((name, index) => {
-    const container = document.createElement('div');
-    container.classList.add('player-ticket-container');
-    
-    const header = document.createElement('h3');
-    header.innerHTML = `<span class="player-name">${name}'s Ticket</span>`;
-    container.appendChild(header);
+  if (!playerNames || playerNames.length === 0) {
+    console.error("No player names found to generate tickets!");
+    return;
+  }
 
-    const ticket = generateTicket();
-    const ticketDiv = document.createElement('div');
-    ticketDiv.className = 'ticket';
+  try {
+    playerNames.forEach((name, index) => {
+      const container = document.createElement('div');
+      container.classList.add('player-ticket-container');
+      
+      const header = document.createElement('h3');
+      header.innerHTML = `<span class="player-name">${name}'s Ticket</span>`;
+      container.appendChild(header);
 
-    ticketsData[index] = ticket;
+      const ticket = generateTicket();
+      const ticketDiv = document.createElement('div');
+      ticketDiv.className = 'ticket';
 
-    if (name === 'Computer') {
-      computerTicket = ticket;
-    }
+      ticketsData[index] = ticket;
 
-    ticket.flat().forEach((num, idx) => {
-      const cell = document.createElement('div');
-      cell.className = 'ticket-cell';
-      cell.textContent = num === 0 ? '' : num;
-      cell.dataset.index = idx;
-      ticketDiv.appendChild(cell);
+      if (name === 'Computer') {
+        computerTicket = ticket;
+      }
+
+      ticket.flat().forEach((num, idx) => {
+        const cell = document.createElement('div');
+        cell.className = 'ticket-cell';
+        cell.textContent = num === 0 ? '' : num;
+        cell.dataset.index = idx;
+        ticketDiv.appendChild(cell);
+      });
+
+      container.appendChild(ticketDiv);
+      playersTickets.appendChild(container);
+
+      console.log(`Generated ticket for ${name}:`, ticket);
+      console.log(`Ticket HTML for ${name}:`, ticketDiv.outerHTML);
     });
 
-    container.appendChild(ticketDiv);
-    playersTickets.appendChild(container);
+    const ticketCells = playersTickets.querySelectorAll('.ticket-cell');
+    console.log(`Total ticket cells created: ${ticketCells.length}`);
+    console.log("Tickets generated for players:", playerNames);
+    console.log("playersTickets content:", playersTickets.innerHTML);
 
-    console.log(`Generated ticket for ${name}:`, ticket);
-    console.log(`Ticket HTML for ${name}:`, ticketDiv.outerHTML);
-  });
-
-  const ticketCells = playersTickets.querySelectorAll('.ticket-cell');
-  console.log(`Total ticket cells created: ${ticketCells.length}`);
-  console.log("Tickets generated for players:", playerNames);
-  console.log("playersTickets content:", playersTickets.innerHTML);
+    if (ticketCells.length === 0) {
+      console.warn("No ticket cells were created. Check CSS visibility or DOM structure.");
+    }
+  } catch (error) {
+    console.error("Error generating tickets:", error);
+  }
 }
 
 function showWinnerBlast(playerName, positionText) {
